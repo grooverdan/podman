@@ -547,6 +547,7 @@ func (r *Runtime) setupContainer(ctx context.Context, ctr *Container) (_ *Contai
 		toLock.lock.Lock()
 		defer toLock.lock.Unlock()
 	}
+
 	// Add the container to the state
 	// TODO: May be worth looking into recovering from name/ID collisions here
 	if ctr.config.Pod != "" {

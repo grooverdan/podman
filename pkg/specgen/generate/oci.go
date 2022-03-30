@@ -20,6 +20,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const sysDevBlock = "/sys/dev/block"
+
 func setProcOpts(s *specgen.SpecGenerator, g *generate.Generator) {
 	if s.ProcOpts == nil {
 		return
@@ -354,6 +356,18 @@ func SpecGenToOCI(ctx context.Context, s *specgen.SpecGenerator, rt *libpod.Runt
 	}
 
 	BlockAccessToKernelFilesystems(s.Privileged, s.PidNS.IsHost(), s.Mask, s.Unmask, &g)
+
+	// If its masked, BlockAccessToKernelFilesystems would have done it, if Unmasked, we don't need to do anything.
+	if !s.Privileged && shouldMask(sysDevBlock, s.Mask) && shouldMask(sysDevBlock, s.Unmask) {
+		g.RemoveMount(sysDevBlock)
+		blkMnt := spec.Mount{
+			Destination: sysDevBlock,
+			Type:        "bind",
+			Source:      "", // filled out by setupContainer
+			Options:     []string{"rprivate", "nosuid", "noexec", "nodev", "ro"},
+		}
+		g.AddMount(blkMnt)
+	}
 
 	g.ClearProcessEnv()
 	for name, val := range s.Env {
